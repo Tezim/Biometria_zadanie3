@@ -11,6 +11,7 @@ from scipy.spatial.distance import euclidean
 from sklearn.decomposition import PCA
 from sklearn.metrics import roc_curve, confusion_matrix
 from sklearn.preprocessing import StandardScaler
+from scipy.spatial.distance import cosine
 
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
@@ -49,7 +50,7 @@ def calculate_distances(features_1, features_2):
     distances_all = numpy.zeros((len(features_1), len(features_2)))
     for i in range(len(features_1)):
         for j in range(len(features_2)):
-            distance = euclidean(features_1[i], features_2[j])
+            distance = cosine(features_1[i], features_2[j])
             distances_all[i][j] = distance
     return distances_all
 
@@ -160,7 +161,7 @@ def create_roc(true_feature_matrix, false_feature_matrix):
     predicted_rand = [1 if num < threshold else 0 for num in distances_rand]
     rand_f, rand_t, thresholds = roc_curve(labels_rand, predicted_rand)
 
-    numpy.savez("distances/pca50", minT=min_distances_T, min_F=min_distances_F,
+    numpy.savez("distances/pca50C", minT=min_distances_T, min_F=min_distances_F,
                 max_T=max_distances_T, max_F=max_distances_F, mean_T=mean_distances_T, mean_F=mean_distances_F,
                 rand_T=rand_distances_T, rand_F=rand_distances_F)
 
@@ -229,10 +230,7 @@ def get_matrix(videos, eigenfaces, mean_face):
     return distance_matrixes
 
 
-def get_values(labels_min, predicted_min):
 
-
-    pass
 
 
 def rocs(T_min, F_min, T_max, F_max, T_mean, F_mean, T_rand, F_rand):
@@ -313,6 +311,7 @@ def rocs(T_min, F_min, T_max, F_max, T_mean, F_mean, T_rand, F_rand):
     tpr_min = []
     fpr_min = []
     for threshold in numpy.arange(numpy.min(distances_min), numpy.max(distances_min), 100):
+
         tpr_min.append(sum(distance < threshold for distance in T_min) / len(T_min))
         fpr_min.append(sum(distance < threshold for distance in F_min) / len(F_min))
 
@@ -339,14 +338,26 @@ def rocs(T_min, F_min, T_max, F_max, T_mean, F_mean, T_rand, F_rand):
 
     plt.figure()
     plt.title("ROC PCA iterative threshold")
-    plt.plot(tpr_min, fpr_min, color='c', label="Min value",ls="--")
-    plt.plot(tpr_max, fpr_max, color='r', label="Max value",ls="-.")
-    plt.plot(tpr_mean, fpr_mean, color='k', label="Mean value",ls='dotted')
-    plt.plot(tpr_rand, fpr_rand, color='g', label="Rand value",ls=":")
+    plt.plot(fpr_min, tpr_min, color='c', label="Min value",ls="--")
+    plt.plot(fpr_max, tpr_max, color='r', label="Max value",ls="-.")
+    plt.plot(fpr_mean, tpr_mean, color='k', label="Mean value",ls='dotted')
+    plt.plot(fpr_rand, tpr_rand, color='g', label="Rand value",ls=":")
     plt.legend(loc="lower right")
     plt.xlabel("False rate")
     plt.ylabel("True rate")
     plt.show()
+
+
+def dF_features(videos_pair):
+
+    for pair in videos_pair:
+        video1 = pair[0]
+        frame = video1[0]
+        cv2.imshow("face",frame)
+        cv2.waitKey()
+        embeddings = DeepFace.represent(frame,model_name="Facenet")
+        print(embeddings)
+    pass
 
 
 if __name__ == '__main__':
@@ -365,7 +376,7 @@ if __name__ == '__main__':
 
     # * DeepFace
 
-    # deep_matrix_T = dF_features(videos_true_pair)
+    deep_matrix_T = dF_features(videos_true_pair)
     # deep_matrix_F = dF_features(videos_false_pair)
 
     # * PCA
@@ -376,8 +387,8 @@ if __name__ == '__main__':
 
     #create_roc(true_dist_matrix, false_dist_matrix)
 
-    data = numpy.load("distances/pca50.npz")
+    #data = numpy.load("distances/pca50C.npz")
 
-    rocs(data['minT'], data['min_F'],data['max_T'],data['max_F'],
-         data['mean_T'],data['mean_F'],data['rand_T'],data['rand_F'])
+    #rocs(data['minT'], data['min_F'],data['max_T'],data['max_F'],
+    #     data['mean_T'],data['mean_F'],data['rand_T'],data['rand_F'])
 
